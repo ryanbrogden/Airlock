@@ -60,6 +60,8 @@ namespace IngameScript
 
                 sensors.ForEach(sensor => {
                     sensor.DetectFriendly = true;
+                    sensor.DetectLargeShips = true;
+                    sensor.DetectSmallShips = true;
                     sensor.DetectEnemy = false;
                     sensor.DetectNeutral = false;
                     sensor.Enabled = true;

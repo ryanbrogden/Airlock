@@ -33,20 +33,38 @@ namespace IngameScript
         public class DoorController
         {
             private MyGridProgram program;
-            private IMyDoor internalDoor, externalDoor;
+            private List<IMyDoor> internalDoor, externalDoor = new List<IMyDoor>();
+
+            private DoorStatus IDoorState
+            {
+                get
+                {
+                    bool isAllClosed = internalDoor.All(door => door.Status == DoorStatus.Closed);
+                    return isAllClosed ? DoorStatus.Closed : DoorStatus.Open;
+                }
+            }
+
+            private DoorStatus EDoorState
+            {
+                get
+                {
+                    bool isAllClosed = externalDoor.All(door => door.Status == DoorStatus.Closed);
+                    return isAllClosed ? DoorStatus.Closed : DoorStatus.Open;
+                }
+            }
 
             public DOOR_STATE Status
             { 
                 get
                 {
-                    if (internalDoor.Status == DoorStatus.Closed && externalDoor.Status == DoorStatus.Closed)
+                    if (IDoorState == DoorStatus.Closed && EDoorState == DoorStatus.Closed)
                     {
                         return DOOR_STATE.CLOSED;
-                    } else if (externalDoor.Status == DoorStatus.Open)
+                    } else if (EDoorState == DoorStatus.Open)
                     {
                         return DOOR_STATE.EXTERNAL_OPEN;
                     }
-                    else if (internalDoor.Status == DoorStatus.Open)
+                    else if (IDoorState == DoorStatus.Open)
                     {
                         return DOOR_STATE.INTERNAL_OPEN;
                     }
@@ -63,14 +81,14 @@ namespace IngameScript
 
                 doors.ForEach(door => door.CloseDoor());
 
-                internalDoor = doors.Find(door => door.CustomName.ToUpper().Contains(SENSOR_STATE.INTERNAL.ToString()));
-                externalDoor = doors.Find(door => door.CustomName.ToUpper().Contains(SENSOR_STATE.EXTERNAL.ToString()));
+                internalDoor = doors.FindAll(door => door.CustomName.ToUpper().Contains(SENSOR_STATE.INTERNAL.ToString()));
+                externalDoor = doors.FindAll(door => door.CustomName.ToUpper().Contains(SENSOR_STATE.EXTERNAL.ToString()));
 
-                if (internalDoor == null)
+                if (internalDoor.Count == 0)
                 {
                     program.Echo("Internal door could not be found");
                 }
-                if (externalDoor == null)
+                if (externalDoor.Count == 0)
                 {
                     program.Echo("External door could not be found");
                 }
@@ -78,29 +96,58 @@ namespace IngameScript
 
             private void OpenInternalDoor()
             {
-                internalDoor.Enabled = true;
-                internalDoor.OpenDoor();
+                internalDoor.ForEach(door => { 
+                    door.Enabled = true;
+                    door.OpenDoor();
+                });
             }
 
             private void OpenExternalDoor()
             {
-                externalDoor.Enabled = true;
-                externalDoor.OpenDoor();
+                externalDoor.ForEach(door => {
+                    door.Enabled = true;
+                    door.OpenDoor();
+                });
             }
 
             private void CloseDoors()
             {
-                internalDoor.CloseDoor();
-                externalDoor.CloseDoor();
+                internalDoor.ForEach(door => {
+                    door.CloseDoor();
+                });
+
+                externalDoor.ForEach(door => {
+                    door.CloseDoor();
+                });
             }
 
             public void Disable()
             {
                 if (Status == DOOR_STATE.CLOSED)
                 {
-                    internalDoor.Enabled = false;
-                    externalDoor.Enabled = false;
+                    internalDoor.ForEach((door) =>
+                    {
+                        door.Enabled = false;
+                    });
+
+                    externalDoor.ForEach((door) =>
+                    {
+                        door.Enabled = false;
+                    });
                 }
+            }
+
+            public void Enable()
+            {
+                internalDoor.ForEach((door) =>
+                {
+                    door.Enabled = true;
+                });
+
+                externalDoor.ForEach((door) =>
+                {
+                    door.Enabled = true;
+                });
             }
 
             public void Run(DOOR_STATE desiredState)

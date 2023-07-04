@@ -60,6 +60,10 @@ namespace IngameScript
             // timer block.
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
 
+
+            List<IMyParachute> parachutes = new List<IMyParachute>();
+            GridTerminalSystem.GetBlocksOfType(parachutes);
+
             MyIniParseResult parseResult;
             if (!_ini.TryParse(Me.CustomData, out parseResult))
             {
@@ -69,6 +73,7 @@ namespace IngameScript
             {
                 string groupNameData = _ini.Get("Airlock", "groups").ToString();
                 string[] groupNames = groupNameData.Split(',');
+                int minimumAtmosphere = int.Parse(_ini.Get("Airlock", "minimumAtmosphere").ToString());
 
                 for (int i = 0; i < groupNames.Length; i++)
                 {
@@ -77,7 +82,13 @@ namespace IngameScript
                     if (group != null)
                     {
                         Echo($"Group name \"{groupNames[i]}\" located");
-                        airlockControllers.Add(new AirlockController(this, group));
+                        if (parachutes.Count > 0)
+                        {
+                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, parachutes[0] ?? null));
+                        } else
+                        {
+                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere));
+                        }
                     }
                     else
                     {

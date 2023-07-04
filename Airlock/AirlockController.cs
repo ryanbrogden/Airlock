@@ -30,15 +30,45 @@ namespace IngameScript
             private DoorController doorController;
             private List<IMyTextPanel> textPanels = new List<IMyTextPanel>();
             private List<IMyAirVent> vents = new List<IMyAirVent>();
+            private IMyParachute parachute;
+            private int minimumAtmosphere = 90;
 
-            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group)
+            private enum STATUS
+            {
+                ENABLED,
+                DISABLED
+            }
+
+            private void Setup(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere)
             {
                 this.program = gridProgram;
+                this.minimumAtmosphere = minimumAtmosphere;
                 sensorController = new SensorController(gridProgram, group);
                 doorController = new DoorController(gridProgram, group);
 
                 group.GetBlocksOfType(vents);
                 group.GetBlocksOfType(textPanels);
+            }
+
+            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere)
+            {
+                Setup(gridProgram, group, minimumAtmosphere);
+            }
+
+            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, IMyParachute parachute)
+            {
+                Setup(gridProgram, group, minimumAtmosphere);
+                this.parachute = parachute;
+            }
+
+            private int Atmosphere()
+            {
+                return (int)(parachute.Atmosphere * 100);
+            }
+
+            private STATUS Status()
+            {
+                return parachute != null && Atmosphere() < minimumAtmosphere ? STATUS.ENABLED : STATUS.DISABLED;
             }
 
             private void Pressurize()
@@ -151,6 +181,20 @@ namespace IngameScript
 
             private void Update()
             {
+
+                if (Status() == STATUS.DISABLED)
+                {
+                    vents.ForEach(vent =>
+                    {
+                        if (vent.CanPressurize)
+                        {
+                            vent.Depressurize = false;
+                        }
+                    });
+                    doorController.Enable();
+                    return;
+                }
+
                 if (sensorController != null)
                 {
                     switch (sensorController.CurrentState)
@@ -184,14 +228,22 @@ namespace IngameScript
                 {
                     panel.ContentType = ContentType.TEXT_AND_IMAGE;
                     panel.Alignment = TextAlignment.CENTER;
-                    panel.FontSize = 2;
-                    panel.WriteText($"Current: {sensorController.CurrentState}");
+                    panel.FontSize = 1.5f;
+                    panel.WriteText($"Status: {Status()}");
                     panel.WriteText("\n", true);
-                    panel.WriteText($"Last: {sensorController.LastState}", true);
+                    panel.WriteText($"Atmosphere: {Atmosphere()}%", true);
                     panel.WriteText("\n", true);
-                    panel.WriteText($"Doors: {doorController.Status}", true);
-                    panel.WriteText("\n", true);
-                    panel.WriteText($"Pressure: {vents[0].Status}", true);
+
+                    if (Status() == STATUS.ENABLED)
+                    {
+                        panel.WriteText($"Current: {sensorController.CurrentState}", true);
+                        panel.WriteText("\n", true);
+                        panel.WriteText($"Last: {sensorController.LastState}", true);
+                        panel.WriteText("\n", true);
+                        panel.WriteText($"Doors: {doorController.Status}", true);
+                        panel.WriteText("\n", true);
+                        panel.WriteText($"Pressure: {vents[0].Status}", true);
+                    }
                 });
             }
         }
