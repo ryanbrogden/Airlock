@@ -45,6 +45,7 @@ namespace IngameScript
         private MyIni _ini = new MyIni();
 
         private List<AirlockController> airlockControllers = new List<AirlockController>();
+        private VentController ventController;
 
         public Program()
         {
@@ -75,6 +76,26 @@ namespace IngameScript
                 string[] groupNames = groupNameData.Split(',');
                 int minimumAtmosphere = int.Parse(_ini.Get("Airlock", "minimumAtmosphere").ToString());
 
+                int maxOxygen;
+                
+                try
+                {
+                    maxOxygen = int.Parse(_ini.Get("Airlock", "maxOxygen").ToString());
+                } catch
+                {
+                    maxOxygen = 0;
+                }
+
+                if (maxOxygen > 0)
+                {
+                    ventController = new VentController(GridTerminalSystem, maxOxygen);
+                }
+                else
+                {
+                    ventController = new VentController(GridTerminalSystem);
+                }
+                
+
                 for (int i = 0; i < groupNames.Length; i++)
                 {
                     IMyBlockGroup group = GridTerminalSystem.GetBlockGroupWithName(groupNames[i]);
@@ -84,10 +105,10 @@ namespace IngameScript
                         Echo($"Group name \"{groupNames[i]}\" located");
                         if (parachutes.Count > 0)
                         {
-                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, parachutes[0] ?? null));
+                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, ventController, parachutes[0] ?? null));
                         } else
                         {
-                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere));
+                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, ventController));
                         }
                     }
                     else
@@ -115,6 +136,7 @@ namespace IngameScript
             {
                 airlockControllers.ForEach(controller => controller.Run());
             }
+            ventController.Write();
         }
     }
 }
