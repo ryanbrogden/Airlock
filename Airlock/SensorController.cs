@@ -60,12 +60,28 @@ namespace IngameScript
 
                 sensors.ForEach(sensor => {
                     sensor.DetectFriendly = true;
-                    sensor.DetectLargeShips = true;
-                    sensor.DetectSmallShips = true;
+                    sensor.DetectLargeShips = false;
+                    sensor.DetectSmallShips = false;
                     sensor.DetectEnemy = false;
                     sensor.DetectNeutral = false;
                     sensor.Enabled = true;
                 });
+            }
+
+            private IMySensorBlock InternalSensor
+            {
+                get
+                {
+                    return sensors.Find(sensor => sensor.CustomName.ToUpper().Contains(SENSOR_STATE.INTERNAL.ToString()));
+                }
+            }
+
+            private IMySensorBlock ExternalSensor
+            {
+                get
+                {
+                    return sensors.Find(sensor => sensor.CustomName.ToUpper().Contains(SENSOR_STATE.EXTERNAL.ToString()));
+                }
             }
 
             public IMySensorBlock GetActiveSensor()
@@ -80,7 +96,7 @@ namespace IngameScript
 
                 if (activeSensor != null)
                 {
-                    List<SENSOR_STATE> states = new List<SENSOR_STATE>() { SENSOR_STATE.INTERNAL, SENSOR_STATE.EXTERNAL, SENSOR_STATE.MIDDLE};
+                    List<SENSOR_STATE> states = new List<SENSOR_STATE>() { SENSOR_STATE.INTERNAL, SENSOR_STATE.EXTERNAL, SENSOR_STATE.MIDDLE };
                     newState = states.First(state => activeSensor.CustomName.ToUpper().Contains(state.ToString()));
                 }
 
@@ -89,6 +105,25 @@ namespace IngameScript
                 {
                     lastState = CurrentState;
                     currentState = newState;
+                }
+
+                switch (CurrentState)
+                {
+                    case SENSOR_STATE.INTERNAL:
+                        ExternalSensor.Enabled = false;
+                        break;
+                    case SENSOR_STATE.MIDDLE:
+                        InternalSensor.Enabled = false;
+                        ExternalSensor.Enabled = false;
+                        break;
+                    case SENSOR_STATE.EXTERNAL:
+                        InternalSensor.Enabled = false;
+                        break;
+                    default:
+                        InternalSensor.Enabled = true;
+                        ExternalSensor.Enabled = true;
+                        break;
+
                 }
             }
 
