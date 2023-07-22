@@ -17,6 +17,7 @@ using VRage.Game.ModAPI.Ingame;
 using VRage.Game.ModAPI.Ingame.Utilities;
 using VRage.Game.ObjectBuilders.Definitions;
 using VRageMath;
+using static IngameScript.Program;
 
 namespace IngameScript
 {
@@ -24,25 +25,23 @@ namespace IngameScript
     {
         public class VentController
         {
-            public int maxOxygen = 95;
+            public int _maxOxygen = 95;
 
             private List<IMyAirVent> vents = new List<IMyAirVent>();
             private List<IMyGasTank> oxygenTanks = new List<IMyGasTank>();
             private List<IMyTextPanel> panels = new List<IMyTextPanel>();
 
-            public VentController(IMyGridTerminalSystem gridTerminalSystem, int maxOxygen)
+            private void Setup(IMyGridTerminalSystem gridTerminalSystem, IMyBlockGroup group)
             {
                 gridTerminalSystem.GetBlocksOfType(panels, vent => vent.CustomName.ToUpper().Contains("[VENT]"));
-                gridTerminalSystem.GetBlocksOfType(vents, vent => vent.CustomName.ToUpper().Contains("[VENT]"));
                 gridTerminalSystem.GetBlocksOfType(oxygenTanks, tank => tank.DetailedInfo.Contains("Oxygen"));
-                this.maxOxygen = maxOxygen;
+                group.GetBlocksOfType(vents);
             }
 
-            public VentController(IMyGridTerminalSystem gridTerminalSystem)
+            public VentController(IMyGridTerminalSystem gridTerminalSystem, IMyBlockGroup group, int maxOxygen)
             {
-                gridTerminalSystem.GetBlocksOfType(panels, vent => vent.CustomName.ToUpper().Contains("[VENT]"));
-                gridTerminalSystem.GetBlocksOfType(vents, vent => vent.CustomName.ToUpper().Contains("[VENT]"));
-                gridTerminalSystem.GetBlocksOfType(oxygenTanks, tank => tank.DetailedInfo.Contains("Oxygen"));
+                Setup(gridTerminalSystem, group);
+                this._maxOxygen = maxOxygen;
             }
 
             public int GetTotalOxygen()
@@ -59,14 +58,34 @@ namespace IngameScript
                 return (int)Math.Ceiling(systemFilled);
             }
 
-            public void Write()
+            public bool isPressurized()
             {
-                panels.ForEach(panel =>
+                return vents.All(vent => vent.Status == VentStatus.Pressurized || (vent.Status == VentStatus.Pressurizing && vent.GetOxygenLevel() > 0.95));
+            }
+
+            public bool isDepressurized()
+            {
+                return vents.All(vent => vent.Status == VentStatus.Depressurized || (vent.Status == VentStatus.Depressurizing && vent.GetOxygenLevel() < 0.05));
+            }
+
+            public void Pressurize()
+            {
+                vents.ForEach(vent =>
                 {
-                    panel.ContentType = ContentType.TEXT_AND_IMAGE;
-                    panel.FontSize = 2;
-                    panel.Alignment = TextAlignment.CENTER;
-                    panel.WriteText($"{GetTotalOxygen()}%");
+                    if (vent.CanPressurize)
+                    {
+                        vent.Depressurize = false;
+                    }
+                });
+            }
+
+            public void Depressurize()
+            {
+                vents.ForEach(vent => {
+                    if (vent.CanPressurize)
+                    {
+                        vent.Depressurize = true;
+                    }
                 });
             }
         }

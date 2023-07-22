@@ -16,10 +16,10 @@ namespace IngameScript.MDK
 
         public static void Main()
         {
-            // In order for your program to actually run, you will need to provide a mockup of all the facilities 
+            // In order for your _program to actually run, you will need to provide a mockup of all the facilities 
             // your script uses from the game, since they're not available outside of the game.
 
-            // Create and configure the desired program.
+            // Create and configure the desired _program.
             var program = MDKFactory.CreateProgram<Program>();
             MDKFactory.Run(program);
         }

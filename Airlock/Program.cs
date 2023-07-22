@@ -44,8 +44,12 @@ namespace IngameScript
         // to learn more about ingame scripts.
         private MyIni _ini = new MyIni();
 
+        private readonly string _customDataTitle = "Airlock";
+        private readonly string _groupKey = "groups";
+        private readonly string _atmosphereKey = "minimumAtmosphere";
+        private readonly string _oxygenKey = "maxOxygen";
+
         private List<AirlockController> airlockControllers = new List<AirlockController>();
-        private VentController ventController;
 
         public Program()
         {
@@ -72,27 +76,18 @@ namespace IngameScript
             }
             else
             {
-                string groupNameData = _ini.Get("Airlock", "groups").ToString();
+                string groupNameData = _ini.Get(_customDataTitle, _groupKey).ToString();
                 string[] groupNames = groupNameData.Split(',');
-                int minimumAtmosphere = int.Parse(_ini.Get("Airlock", "minimumAtmosphere").ToString());
+                int minimumAtmosphere = int.Parse(_ini.Get(_customDataTitle, _atmosphereKey).ToString());
 
-                int maxOxygen;
+                int maxOxygen = 0;
                 
                 try
                 {
-                    maxOxygen = int.Parse(_ini.Get("Airlock", "maxOxygen").ToString());
+                    maxOxygen = int.Parse(_ini.Get(_customDataTitle, _oxygenKey).ToString());
                 } catch
                 {
                     maxOxygen = 0;
-                }
-
-                if (maxOxygen > 0)
-                {
-                    ventController = new VentController(GridTerminalSystem, maxOxygen);
-                }
-                else
-                {
-                    ventController = new VentController(GridTerminalSystem);
                 }
                 
 
@@ -103,13 +98,15 @@ namespace IngameScript
                     if (group != null)
                     {
                         Echo($"Group name \"{groupNames[i]}\" located");
+
                         if (parachutes.Count > 0)
                         {
-                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, ventController, parachutes[0] ?? null));
+                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, maxOxygen, parachutes[0] ?? null));
                         } else
                         {
-                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, ventController));
+                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, maxOxygen));
                         }
+                        
                     }
                     else
                     {
@@ -122,7 +119,7 @@ namespace IngameScript
 
         public void Save()
         {
-            // Called when the program needs to save its state. Use
+            // Called when the _program needs to save its state. Use
             // this method to save your state to the Storage field
             // or some other means. 
             // 
@@ -136,7 +133,6 @@ namespace IngameScript
             {
                 airlockControllers.ForEach(controller => controller.Run());
             }
-            ventController.Write();
         }
     }
 }
