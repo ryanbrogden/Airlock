@@ -30,6 +30,7 @@ namespace IngameScript
             private DoorController _doorController;
             private VentController _ventController;
             private LCDController _lcdController;
+            private LightController _lightController;
             private List<IMyTextPanel> textPanels = new List<IMyTextPanel>();
             private List<IMyAirVent> vents = new List<IMyAirVent>();
             private IMyParachute parachute;
@@ -49,6 +50,7 @@ namespace IngameScript
                 _sensorController = new SensorController(gridProgram, group);
                 _doorController = new DoorController(gridProgram, group);
                 _ventController = new VentController(gridProgram.GridTerminalSystem, group, maxOxygen);
+                _lightController = new LightController(group);
 
                 group.GetBlocksOfType(vents);
                 group.GetBlocksOfType(textPanels);
@@ -75,7 +77,7 @@ namespace IngameScript
                 return parachute != null && Atmosphere() < _minimumAtmosphere ? STATUS.ENABLED : STATUS.DISABLED;
             }
 
-            private void Pressurize()
+            private void PressurizeAirlock()
             {
                 _doorController.Run(DOOR_STATE.CLOSED);
                 if (_doorController.Status == DOOR_STATE.CLOSED)
@@ -85,7 +87,7 @@ namespace IngameScript
                 }
             }
 
-            private void Depressurize()
+            private void DepressurizeAirlock()
             {
                 _doorController.Run(DOOR_STATE.CLOSED);
                 if (_doorController.Status == DOOR_STATE.CLOSED)
@@ -95,27 +97,17 @@ namespace IngameScript
                 }
             }
 
-            private bool isPressurized()
-            {
-                return _ventController.isPressurized();
-            }
-
-            private bool isDepressurized()
-            {
-                return _ventController.isDepressurized();
-            }
-
             private void InternalControl()
             {
                 switch(_sensorController.LastState)
                 {
                     case SENSOR_STATE.CLEAR:
-                        if (isPressurized())
+                        if (_ventController.isPressurized())
                         {
                             _doorController.Run(DOOR_STATE.INTERNAL_OPEN);
                         } else
                         {
-                            Pressurize();
+                            PressurizeAirlock();
                         }
                         break;
                     case SENSOR_STATE.MIDDLE:
@@ -129,23 +121,23 @@ namespace IngameScript
                 switch (_sensorController.LastState)
                 {
                     case SENSOR_STATE.INTERNAL:
-                        if (isDepressurized() || _ventController.GetTotalOxygen() > _ventController._maxOxygen)
+                        if (_ventController.isDepressurized() || _ventController.GetTotalOxygen() > _ventController._maxOxygen)
                         {
                             _doorController.Run(DOOR_STATE.EXTERNAL_OPEN);
                         }
                         else
                         {
-                            Depressurize();
+                            DepressurizeAirlock();
                         }
                         break;
                     case SENSOR_STATE.EXTERNAL:
-                        if (isPressurized())
+                        if (_ventController.isPressurized())
                         {
                             _doorController.Run(DOOR_STATE.INTERNAL_OPEN);
                         }
                         else
                         {
-                            Pressurize();
+                            PressurizeAirlock();
                         }
                         break;
                     case SENSOR_STATE.CLEAR:
@@ -159,13 +151,13 @@ namespace IngameScript
                 switch (_sensorController.LastState)
                 {
                     case SENSOR_STATE.CLEAR:
-                        if (isDepressurized() || _ventController.GetTotalOxygen() > _ventController._maxOxygen)
+                        if (_ventController.isDepressurized() || _ventController.GetTotalOxygen() > _ventController._maxOxygen)
                         {
                             _doorController.Run(DOOR_STATE.EXTERNAL_OPEN);
                         }
                         else
                         {
-                            Depressurize();
+                            DepressurizeAirlock();
                         }
                         break;
                     case SENSOR_STATE.MIDDLE:
@@ -176,14 +168,14 @@ namespace IngameScript
 
             private void ClearControl()
             {
-                if (_ventController.GetTotalOxygen() > 98 && _doorController.Status == DOOR_STATE.CLOSED && isPressurized())
+                if (_ventController.GetTotalOxygen() > 98 && _doorController.Status == DOOR_STATE.CLOSED && _ventController.isPressurized())
                 {
                     _doorController.Run(DOOR_STATE.EXTERNAL_OPEN);
                 }
                 else
                 {
                     _doorController.Run(DOOR_STATE.CLOSED);
-                    Pressurize();
+                    PressurizeAirlock();
                     _doorController.Disable();
                 }
             }
@@ -193,7 +185,7 @@ namespace IngameScript
 
                 if (Status() == STATUS.DISABLED)
                 {
-                    _ventController.Pressurize();
+                    PressurizeAirlock();
                     _doorController.Enable();
                     return;
                 }
@@ -224,6 +216,7 @@ namespace IngameScript
 
             public void Run() {
                 _sensorController.Run();
+                _lightController.Run(_ventController.Status);
                 Update();
 
                 _lcdController.WriteText($"Status: {Status()}");

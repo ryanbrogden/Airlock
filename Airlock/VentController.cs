@@ -58,6 +58,29 @@ namespace IngameScript
                 return (int)Math.Ceiling(systemFilled);
             }
 
+            public VentStatus Status
+            {
+                get
+                {
+                    if (isPressurized())
+                    {
+                        return VentStatus.Pressurized;
+                    }
+
+                    if (isDepressurized())
+                    {
+                        return VentStatus.Depressurized;
+                    }
+
+                    if (vents.Any(vent => vent.Status == VentStatus.Pressurizing))
+                    {
+                        return VentStatus.Pressurizing;
+                    }
+
+                    return VentStatus.Depressurizing;
+                }
+            }
+
             public bool isPressurized()
             {
                 return vents.All(vent => vent.Status == VentStatus.Pressurized || (vent.Status == VentStatus.Pressurizing && vent.GetOxygenLevel() > 0.95));

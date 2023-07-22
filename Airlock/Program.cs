@@ -133,6 +133,12 @@ namespace IngameScript
             {
                 airlockControllers.ForEach(controller => controller.Run());
             }
+
+            Echo($"Current instructions: {Runtime.CurrentInstructionCount}");
+            Echo($"Max instructions: {Runtime.MaxInstructionCount}");
+
+            Echo($"Current call chain depth: {Runtime.CurrentCallChainDepth}");
+            Echo($"Max call chain depth: {Runtime.MaxCallChainDepth}");
         }
     }
 }
