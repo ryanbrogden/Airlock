@@ -33,8 +33,10 @@ namespace IngameScript
             private LightController _lightController;
             private List<IMyTextPanel> textPanels = new List<IMyTextPanel>();
             private List<IMyAirVent> vents = new List<IMyAirVent>();
-            private IMyParachute parachute;
+            private IMyParachute _parachute;
             private int _minimumAtmosphere = 90;
+            private string _groupName = "";
+            private IMyBlockGroup _blockGroup;
 
             private enum STATUS
             {
@@ -42,39 +44,55 @@ namespace IngameScript
                 DISABLED
             }
 
-            private void Setup(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, int maxOxygen)
+            private void Setup(MyGridProgram gridProgram, string groupName, int minimumAtmosphere, int maxOxygen)
             {
-                _lcdController = new LCDController(group, 10f, gridProgram.Runtime);
-                _program = gridProgram;
-                _minimumAtmosphere = minimumAtmosphere;
-                _sensorController = new SensorController(gridProgram, group);
-                _doorController = new DoorController(gridProgram, group);
-                _ventController = new VentController(gridProgram.GridTerminalSystem, group, maxOxygen);
-                _lightController = new LightController(group);
+                _groupName = groupName;
+                _blockGroup = gridProgram.GridTerminalSystem.GetBlockGroupWithName(_groupName);
 
-                group.GetBlocksOfType(vents);
-                group.GetBlocksOfType(textPanels);
+                if (_blockGroup != null)
+                {
+                    _lcdController = new LCDController(_blockGroup, 10f, gridProgram.Runtime);
+                    _program = gridProgram;
+                    _minimumAtmosphere = minimumAtmosphere;
+                    _sensorController = new SensorController(gridProgram, _blockGroup);
+                    _doorController = new DoorController(gridProgram, _blockGroup);
+                    _ventController = new VentController(gridProgram.GridTerminalSystem, _blockGroup, maxOxygen);
+                    _lightController = new LightController(_blockGroup);
+
+                    _blockGroup.GetBlocksOfType(vents);
+                    _blockGroup.GetBlocksOfType(textPanels);
+                }
+                else
+                {
+                    gridProgram.Echo($"Group name \"{groupName}\" not found");
+                }
             }
 
-            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, int maxOxygen)
+            public AirlockController(MyGridProgram gridProgram, string groupName, int minimumAtmosphere, int maxOxygen)
             {
-                Setup(gridProgram, group, minimumAtmosphere, maxOxygen);
+                Setup(gridProgram, groupName, minimumAtmosphere, maxOxygen);
             }
 
-            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, int maxOxygen, IMyParachute parachute)
+            public AirlockController(MyGridProgram gridProgram, string groupName, int minimumAtmosphere, int maxOxygen, IMyParachute parachute)
             {
-                Setup(gridProgram, group, minimumAtmosphere, maxOxygen);
-                this.parachute = parachute;
+                Setup(gridProgram, groupName, minimumAtmosphere, maxOxygen);
+                _parachute = parachute;
             }
 
-            private int Atmosphere()
+            private int Atmosphere
             {
-                return (int)(parachute.Atmosphere * 100);
+                get 
+                {
+                    return (int)(_parachute.Atmosphere * 100);
+                }
             }
 
-            private STATUS Status()
+            private STATUS Status
             {
-                return parachute != null && Atmosphere() < _minimumAtmosphere ? STATUS.ENABLED : STATUS.DISABLED;
+                get
+                {
+                    return _parachute != null && Atmosphere < _minimumAtmosphere ? STATUS.ENABLED : STATUS.DISABLED;
+                }
             }
 
             private void PressurizeAirlock()
@@ -183,7 +201,7 @@ namespace IngameScript
             private void Update()
             {
 
-                if (Status() == STATUS.DISABLED)
+                if (Status == STATUS.DISABLED)
                 {
                     PressurizeAirlock();
                     _doorController.Enable();
@@ -215,27 +233,33 @@ namespace IngameScript
             }
 
             public void Run() {
-                _sensorController.Run();
-                _lightController.Run(_ventController.Status);
-                Update();
 
-                _lcdController.WriteText($"Status: {Status()}");
-                _lcdController.WriteText("\n", true);
-                _lcdController.WriteText($"Atmosphere: {Atmosphere()}%", true);
-                _lcdController.WriteText("\n", true);
-
-                if (Status() == STATUS.ENABLED)
+                if (_blockGroup != null)
                 {
-                    _lcdController.WriteText($"Current: {_sensorController.CurrentState}", true);
+                    _sensorController.Run();
+                    _lightController.Run(_ventController.Status);
+                    Update();
+
+                    _lcdController.WriteText($"{_groupName}");
                     _lcdController.WriteText("\n", true);
-                    _lcdController.WriteText($"Last: {_sensorController.LastState}", true);
+                    _lcdController.WriteText($"Status: {Status}", true);
                     _lcdController.WriteText("\n", true);
-                    _lcdController.WriteText($"Doors: {_doorController.Status}", true);
+                    _lcdController.WriteText($"Atmosphere: {Atmosphere}%", true);
                     _lcdController.WriteText("\n", true);
-                    _lcdController.WriteText($"Pressure: {vents[0].Status}", true);
-                    _lcdController.WriteText("\n", true);
-                    _lcdController.WriteText($"System Oxygen: {_ventController.GetTotalOxygen()}%", true);
-                    _lcdController.WriteText("\n", true);
+
+                    if (Status == STATUS.ENABLED)
+                    {
+                        _lcdController.WriteText($"Current: {_sensorController.CurrentState}", true);
+                        _lcdController.WriteText("\n", true);
+                        _lcdController.WriteText($"Last: {_sensorController.LastState}", true);
+                        _lcdController.WriteText("\n", true);
+                        _lcdController.WriteText($"Doors: {_doorController.Status}", true);
+                        _lcdController.WriteText("\n", true);
+                        _lcdController.WriteText($"Pressure: {vents[0].Status}", true);
+                        _lcdController.WriteText("\n", true);
+                        _lcdController.WriteText($"System Oxygen: {_ventController.GetTotalOxygen()}%", true);
+                        _lcdController.WriteText("\n", true);
+                    }
                 }
             }
         }

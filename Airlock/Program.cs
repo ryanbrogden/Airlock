@@ -76,44 +76,60 @@ namespace IngameScript
             }
             else
             {
-                string groupNameData = _ini.Get(_customDataTitle, _groupKey).ToString();
-                string[] groupNames = groupNameData.Split(',');
-                int minimumAtmosphere = int.Parse(_ini.Get(_customDataTitle, _atmosphereKey).ToString());
 
-                int maxOxygen = 0;
+                int minimumAtmosphere = GetMinimumAtmosphere();
+                int maxOxygen = GetMaxOxygen();
                 
-                try
-                {
-                    maxOxygen = int.Parse(_ini.Get(_customDataTitle, _oxygenKey).ToString());
-                } catch
-                {
-                    maxOxygen = 0;
-                }
-                
-
-                for (int i = 0; i < groupNames.Length; i++)
-                {
-                    IMyBlockGroup group = GridTerminalSystem.GetBlockGroupWithName(groupNames[i]);
-
-                    if (group != null)
+                GetGroupNames().ForEach(name => {
+                    string trimmedName = name.Trim();
+                    
+                    if (parachutes.Count > 0)
                     {
-                        Echo($"Group name \"{groupNames[i]}\" located");
-
-                        if (parachutes.Count > 0)
-                        {
-                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, maxOxygen, parachutes[0] ?? null));
-                        } else
-                        {
-                            airlockControllers.Add(new AirlockController(this, group, minimumAtmosphere, maxOxygen));
-                        }
-                        
+                        airlockControllers.Add(new AirlockController(this, trimmedName, minimumAtmosphere, maxOxygen, parachutes[0] ?? null));
                     }
                     else
                     {
-                        Echo($"Group name \"{groupNames[i]}\" not found");
+                        airlockControllers.Add(new AirlockController(this, trimmedName, minimumAtmosphere, maxOxygen));
                     }
+                });
+            }
+        }
 
-                }
+        public int GetMaxOxygen() 
+        {
+            try
+            {
+                return int.Parse(_ini.Get(_customDataTitle, _oxygenKey).ToString());
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        public int GetMinimumAtmosphere()
+        {
+            try
+            {
+                return int.Parse(_ini.Get(_customDataTitle, _atmosphereKey).ToString());
+            }
+            catch
+            {
+                return 80;
+            }
+        }
+
+        public List<string> GetGroupNames()
+        {
+            try
+            {
+                string groupNameData = _ini.Get(_customDataTitle, _groupKey).ToString();
+                return groupNameData.Split(',').ToList();
+            }
+            catch 
+            {
+                Echo("No groups");
+                return new List<string>();
             }
         }
 
