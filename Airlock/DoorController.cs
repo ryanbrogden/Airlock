@@ -96,6 +96,10 @@ namespace IngameScript
 
             private void OpenInternalDoor()
             {
+                
+                CloseDoors();
+                Disable();
+
                 internalDoor.ForEach(door => { 
                     door.Enabled = true;
                     door.OpenDoor();
@@ -104,21 +108,30 @@ namespace IngameScript
 
             private void OpenExternalDoor()
             {
+                CloseDoors();
+                Disable();
+
                 externalDoor.ForEach(door => {
                     door.Enabled = true;
                     door.OpenDoor();
                 });
             }
 
+
             private void CloseDoors()
             {
-                internalDoor.ForEach(door => {
-                    door.CloseDoor();
-                });
+                if (Status != DOOR_STATE.CLOSED)
+                {
+                    internalDoor.ForEach(door =>
+                    {
+                        door.CloseDoor();
+                    });
 
-                externalDoor.ForEach(door => {
-                    door.CloseDoor();
-                });
+                    externalDoor.ForEach(door =>
+                    {
+                        door.CloseDoor();
+                    });
+                }
             }
 
             public void Disable()
@@ -157,7 +170,7 @@ namespace IngameScript
                     case DOOR_STATE.CLOSED:
                         CloseDoors();
                         break;
-                    case DOOR_STATE.INTERNAL_OPEN: 
+                    case DOOR_STATE.INTERNAL_OPEN:
                         OpenInternalDoor();
                         break;
                     case DOOR_STATE.EXTERNAL_OPEN:
@@ -165,8 +178,6 @@ namespace IngameScript
                         break;
                 }
             }
-
-            
         }
     }
 }
