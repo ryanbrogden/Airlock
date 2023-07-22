@@ -28,6 +28,7 @@ namespace IngameScript
             private MyGridProgram program;
             private SensorController sensorController;
             private DoorController doorController;
+            private VentController ventController;
             private List<IMyTextPanel> textPanels = new List<IMyTextPanel>();
             private List<IMyAirVent> vents = new List<IMyAirVent>();
             private IMyParachute parachute;
@@ -39,25 +40,26 @@ namespace IngameScript
                 DISABLED
             }
 
-            private void Setup(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere)
+            private void Setup(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, VentController ventController)
             {
                 this.program = gridProgram;
                 this.minimumAtmosphere = minimumAtmosphere;
                 sensorController = new SensorController(gridProgram, group);
                 doorController = new DoorController(gridProgram, group);
+                this.ventController = ventController;
 
                 group.GetBlocksOfType(vents);
                 group.GetBlocksOfType(textPanels);
             }
 
-            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere)
+            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, VentController ventController)
             {
-                Setup(gridProgram, group, minimumAtmosphere);
+                Setup(gridProgram, group, minimumAtmosphere, ventController);
             }
 
-            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, IMyParachute parachute)
+            public AirlockController(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, VentController ventController, IMyParachute parachute)
             {
-                Setup(gridProgram, group, minimumAtmosphere);
+                Setup(gridProgram, group, minimumAtmosphere, ventController);
                 this.parachute = parachute;
             }
 
@@ -104,12 +106,12 @@ namespace IngameScript
 
             private bool isPressurized()
             {
-                return vents.All(vent => vent.Status == VentStatus.Pressurized);
+                return vents.All(vent => vent.Status == VentStatus.Pressurized || (vent.Status == VentStatus.Pressurizing && vent.GetOxygenLevel() > 0.95));
             }
 
             private bool isDepressurized()
             {
-                return vents.All(vent => vent.Status == VentStatus.Depressurized || (vent.Status == VentStatus.Depressurizing && vent.GetOxygenLevel() < 0.5));
+                return vents.All(vent => vent.Status == VentStatus.Depressurized || (vent.Status == VentStatus.Depressurizing && vent.GetOxygenLevel() < 0.05));
             }
 
             private void InternalControl()
@@ -136,7 +138,7 @@ namespace IngameScript
                 switch (sensorController.LastState)
                 {
                     case SENSOR_STATE.INTERNAL:
-                        if (isDepressurized())
+                        if (isDepressurized() || ventController.GetTotalOxygen() > ventController.maxOxygen)
                         {
                             doorController.Run(DOOR_STATE.EXTERNAL_OPEN);
                         }
@@ -156,6 +158,9 @@ namespace IngameScript
                         }
                         
                         break;
+                    case SENSOR_STATE.CLEAR:
+                        doorController.Run(DOOR_STATE.INTERNAL_OPEN);
+                        break;
                 }
             }
 
@@ -164,7 +169,7 @@ namespace IngameScript
                 switch (sensorController.LastState)
                 {
                     case SENSOR_STATE.CLEAR:
-                        if (isDepressurized())
+                        if (isDepressurized() || ventController.GetTotalOxygen() > ventController.maxOxygen)
                         {
                             doorController.Run(DOOR_STATE.EXTERNAL_OPEN);
                         }
@@ -176,6 +181,20 @@ namespace IngameScript
                     case SENSOR_STATE.MIDDLE:
                         doorController.Run(DOOR_STATE.CLOSED);
                         break;
+                }
+            }
+
+            private void ClearControl()
+            {
+                if (ventController.GetTotalOxygen() > 98 && doorController.Status == DOOR_STATE.CLOSED && isPressurized())
+                {
+                    doorController.Run(DOOR_STATE.EXTERNAL_OPEN);
+                }
+                else
+                {
+                    doorController.Run(DOOR_STATE.CLOSED);
+                    Pressurize();
+                    doorController.Disable();
                 }
             }
 
@@ -209,8 +228,7 @@ namespace IngameScript
                             ExternalControl();
                             break;
                         default:
-                            doorController.Run(DOOR_STATE.CLOSED);
-                            doorController.Disable();
+                            ClearControl();
                             break;
 
                     }
