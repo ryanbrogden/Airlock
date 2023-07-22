@@ -29,11 +29,9 @@ namespace IngameScript
 
             private List<IMyAirVent> vents = new List<IMyAirVent>();
             private List<IMyGasTank> oxygenTanks = new List<IMyGasTank>();
-            private List<IMyTextPanel> panels = new List<IMyTextPanel>();
 
             private void Setup(IMyGridTerminalSystem gridTerminalSystem, IMyBlockGroup group)
             {
-                gridTerminalSystem.GetBlocksOfType(panels, vent => vent.CustomName.ToUpper().Contains("[VENT]"));
                 gridTerminalSystem.GetBlocksOfType(oxygenTanks, tank => tank.DetailedInfo.Contains("Oxygen"));
                 group.GetBlocksOfType(vents);
             }
