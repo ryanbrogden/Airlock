@@ -29,6 +29,7 @@ namespace IngameScript
             private SensorController sensorController;
             private DoorController doorController;
             private VentController ventController;
+            private LCDController LCDController;
             private List<IMyTextPanel> textPanels = new List<IMyTextPanel>();
             private List<IMyAirVent> vents = new List<IMyAirVent>();
             private IMyParachute parachute;
@@ -42,7 +43,8 @@ namespace IngameScript
 
             private void Setup(MyGridProgram gridProgram, IMyBlockGroup group, int minimumAtmosphere, VentController ventController)
             {
-                this.program = gridProgram;
+                LCDController = new LCDController(group, 10f, gridProgram.Runtime);
+                program = gridProgram;
                 this.minimumAtmosphere = minimumAtmosphere;
                 sensorController = new SensorController(gridProgram, group);
                 doorController = new DoorController(gridProgram, group);
@@ -156,7 +158,6 @@ namespace IngameScript
                         {
                             Pressurize();
                         }
-                        
                         break;
                     case SENSOR_STATE.CLEAR:
                         doorController.Run(DOOR_STATE.INTERNAL_OPEN);
@@ -242,27 +243,24 @@ namespace IngameScript
                 sensorController.Run();
                 Update();
 
-                textPanels.ForEach(panel =>
-                {
-                    panel.ContentType = ContentType.TEXT_AND_IMAGE;
-                    panel.Alignment = TextAlignment.CENTER;
-                    panel.FontSize = 1.5f;
-                    panel.WriteText($"Status: {Status()}");
-                    panel.WriteText("\n", true);
-                    panel.WriteText($"Atmosphere: {Atmosphere()}%", true);
-                    panel.WriteText("\n", true);
+                LCDController.WriteText($"Status: {Status()}");
+                LCDController.WriteText("\n", true);
+                LCDController.WriteText($"Atmosphere: {Atmosphere()}%", true);
+                LCDController.WriteText("\n", true);
 
-                    if (Status() == STATUS.ENABLED)
-                    {
-                        panel.WriteText($"Current: {sensorController.CurrentState}", true);
-                        panel.WriteText("\n", true);
-                        panel.WriteText($"Last: {sensorController.LastState}", true);
-                        panel.WriteText("\n", true);
-                        panel.WriteText($"Doors: {doorController.Status}", true);
-                        panel.WriteText("\n", true);
-                        panel.WriteText($"Pressure: {vents[0].Status}", true);
-                    }
-                });
+                if (Status() == STATUS.ENABLED)
+                {
+                    LCDController.WriteText($"Current: {sensorController.CurrentState}", true);
+                    LCDController.WriteText("\n", true);
+                    LCDController.WriteText($"Last: {sensorController.LastState}", true);
+                    LCDController.WriteText("\n", true);
+                    LCDController.WriteText($"Doors: {doorController.Status}", true);
+                    LCDController.WriteText("\n", true);
+                    LCDController.WriteText($"Pressure: {vents[0].Status}", true);
+                    LCDController.WriteText("\n", true);
+                    LCDController.WriteText($"System Oxygen: {ventController.GetTotalOxygen()}%", true);
+                    LCDController.WriteText("\n", true);
+                }
             }
         }
     }

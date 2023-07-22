@@ -61,7 +61,7 @@ namespace IngameScript
             // timer block.
             Runtime.UpdateFrequency = UpdateFrequency.Update100;
 
-
+            
             List<IMyParachute> parachutes = new List<IMyParachute>();
             GridTerminalSystem.GetBlocksOfType(parachutes);
 
